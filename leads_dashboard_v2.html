@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Leads — Mayo 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2d45;
+    --border2: #253350;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --orange: #f97316;
+    --purple: #8b5cf6;
+    --pink: #ec4899;
+    --cyan: #06b6d4;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; font-size:14px; min-height:100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #111827 0%, #1e3a5f 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top:0; z-index:100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .header-icon { width:40px; height:40px; background:var(--accent); border-radius:10px;
+    display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .header-title { font-size:20px; font-weight:700; color:#fff; letter-spacing:-0.3px; }
+  .header-sub { font-size:12px; color:var(--text2); margin-top:2px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .badge { background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.3);
+    color:var(--green); padding:5px 12px; border-radius:20px;
+    font-size:11px; font-weight:600; display:flex; align-items:center; gap:5px; }
+  .badge::before { content:""; width:6px; height:6px; background:var(--green);
+    border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.2)} }
+  .last-update { font-size:11px; color:var(--text3); }
+
+  /* ── FILTERS ── */
+  .filters-bar {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:14px 28px;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  }
+  .filter-group { display:flex; flex-direction:column; gap:4px; }
+  .filter-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--text3); }
+  .filter-select, .filter-input {
+    background:var(--surface2); border:1px solid var(--border2); color:var(--text);
+    padding:6px 10px; border-radius:8px; font-size:12px; font-family:inherit;
+    min-width:140px; cursor:pointer; outline:none; transition: border-color .2s;
+  }
+  .filter-select:hover, .filter-input:hover,
+  .filter-select:focus, .filter-input:focus { border-color:var(--accent); }
+  .filter-input { min-width:120px; }
+  .filter-divider { width:1px; height:42px; background:var(--border); margin:0 4px; }
+  .btn-reset {
+    background: rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
+    color:var(--red); padding:6px 14px; border-radius:8px; font-size:12px;
+    font-weight:600; cursor:pointer; transition:all .2s; font-family:inherit;
+  }
+  .btn-reset:hover { background:rgba(239,68,68,.2); }
+  .filter-count {
+    background:var(--surface2); border:1px solid var(--border2);
+    padding:6px 12px; border-radius:8px; font-size:12px; color:var(--text2);
+    white-space:nowrap;
+  }
+  .filter-count span { color:var(--accent2); font-weight:700; }
+
+  /* ── MAIN ── */
+  .main { padding:20px 28px; }
+
+  /* ── KPI GRID ── */
+  .kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:20px; }
+  @media(max-width:1400px){ .kpi-grid{ grid-template-columns:repeat(3,1fr); } }
+  @media(max-width:800px){ .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+
+  .kpi-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px;
+    position:relative; overflow:hidden; transition:transform .2s, border-color .2s;
+  }
+  .kpi-card:hover { transform:translateY(-2px); border-color:var(--border2); }
+  .kpi-card::before {
+    content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--kpi-color, var(--accent));
+  }
+  .kpi-card-icon {
+    position:absolute; top:12px; right:12px; font-size:22px; opacity:.2;
+  }
+  .kpi-label { font-size:10px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.8px; color:var(--text3); margin-bottom:8px; }
+  .kpi-value { font-size:30px; font-weight:700; color:var(--kpi-color, var(--accent));
+    line-height:1; margin-bottom:5px; font-variant-numeric:tabular-nums; }
+  .kpi-sub { font-size:11px; color:var(--text3); }
+  .kpi-trend { display:inline-flex; align-items:center; gap:3px;
+    font-size:11px; font-weight:600; padding:2px 6px; border-radius:4px; margin-top:4px; }
+  .kpi-trend.up { background:rgba(16,185,129,.1); color:var(--green); }
+  .kpi-trend.down { background:rgba(239,68,68,.1); color:var(--red); }
+  .kpi-trend.neutral { background:rgba(148,163,184,.1); color:var(--text2); }
+
+  /* ── CHART GRID ── */
+  .chart-grid { display:grid; gap:16px; margin-bottom:16px; }
+  .grid-3 { grid-template-columns:1fr 1fr 1fr; }
+  .grid-2 { grid-template-columns:1fr 1fr; }
+  .grid-2-1 { grid-template-columns:2fr 1fr; }
+  .grid-1-2 { grid-template-columns:1fr 2fr; }
+  @media(max-width:1100px){ .grid-3,.grid-2,.grid-2-1,.grid-1-2{ grid-template-columns:1fr; } }
+
+  .chart-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:18px 20px;
+    display:flex; flex-direction:column; transition:border-color .2s;
+  }
+  .chart-card:hover { border-color:var(--border2); }
+  .chart-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .chart-title { font-size:13px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .chart-title .dot { width:8px; height:8px; border-radius:50%; background:var(--dot-color, var(--accent)); flex-shrink:0; }
+  .chart-subtitle { font-size:11px; color:var(--text3); margin-top:2px; }
+  .chart-badge { font-size:10px; font-weight:600; padding:3px 8px; border-radius:4px;
+    background:rgba(59,130,246,.1); color:var(--accent2); }
+  .chart-body { flex:1; position:relative; min-height:200px; }
+
+  /* ── FUNNEL ── */
+  .funnel-wrap { display:flex; flex-direction:column; gap:6px; padding:4px 0; }
+  .funnel-item { display:flex; align-items:center; gap:10px; }
+  .funnel-label { font-size:11px; color:var(--text2); min-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .funnel-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:22px; overflow:hidden; position:relative; }
+  .funnel-bar { height:100%; border-radius:4px; transition:width .6s ease; display:flex; align-items:center; padding-left:8px; }
+  .funnel-bar span { font-size:10px; font-weight:600; color:rgba(255,255,255,.9); white-space:nowrap; }
+  .funnel-count { font-size:11px; font-weight:600; color:var(--text); min-width:36px; text-align:right; font-variant-numeric:tabular-nums; }
+  .funnel-pct { font-size:10px; color:var(--text3); min-width:40px; text-align:right; }
+
+  /* ── AREA TABLE ── */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; padding:8px 12px; font-size:11px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.5px; color:var(--text3);
+    border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:8px 12px; font-size:12px; color:var(--text);
+    border-bottom:1px solid rgba(31,45,69,.5); white-space:nowrap; }
+  tr:hover td { background:rgba(59,130,246,.04); }
+  .progress-cell { display:flex; align-items:center; gap:8px; }
+  .mini-bar { flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; min-width:60px; }
+  .mini-fill { height:100%; border-radius:3px; transition:width .5s; }
+  .pct-text { font-size:11px; font-weight:600; min-width:36px; text-align:right; }
+  .area-rank { width:22px; height:22px; background:var(--surface2); border-radius:6px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; color:var(--text3); }
+
+  /* ── SCROLL ── */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:var(--surface); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+
+  /* ── FOOTER ── */
+  .footer { text-align:center; padding:16px; font-size:11px; color:var(--text3);
+    border-top:1px solid var(--border); margin-top:8px; }
+
+  /* ── No Data ── */
+  .no-data { display:flex; align-items:center; justify-content:center;
+    height:100%; color:var(--text3); font-size:13px; flex-direction:column; gap:8px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">📊</div>
+    <div>
+      <div class="header-title">Dashboard de Leads — Campaña Reclutamiento</div>
+      <div class="header-sub">Análisis integral · Mayo 2026 · 624 registros totales</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="badge">EN VIVO</div>
+    <div class="last-update">Actualizado: 28 May 2026</div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <div class="filter-group">
+    <span class="filter-label">Fuente</span>
+    <select class="filter-select" id="fSource" onchange="applyFilters()">
+      <option value="">Todas las fuentes</option>
+      <option>Facebook (VIVO)</option>
+      <option>Facebook</option>
+      <option>Gmail</option>
+      <option>Referral</option>
+      <option>Inbound call</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Área de Campaña</span>
+    <select class="filter-select" id="fArea" onchange="applyFilters()">
+      <option value="">Todas las áreas</option>
+      <option>Redondo Beach</option>
+      <option>Sacramento</option>
+      <option>Stockton</option>
+      <option>Ventura</option>
+      <option>Lancaster</option>
+      <option>Palo Alto</option>
+      <option>Escondido</option>
+      <option>Palmdale</option>
+      <option>Windsor</option>
+      <option>Fairfield</option>
+      <option>Manteca</option>
+      <option>South San Francisco</option>
+      <option>San Jose</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Fecha Inicio</span>
+    <input type="date" class="filter-input" id="fDateFrom" value="2026-05-01" onchange="applyFilters()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Fecha Fin</span>
+    <input type="date" class="filter-input" id="fDateTo" value="2026-05-26" onchange="applyFilters()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Estado Contacto</span>
+    <select class="filter-select" id="fReached" onchange="applyFilters()">
+      <option value="">Todos</option>
+      <option value="1">Contactado ✓</option>
+      <option value="0">No Contactado ✗</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Categoría Resultado</span>
+    <select class="filter-select" id="fCat" onchange="applyFilters()">
+      <option value="">Todas</option>
+      <option value="Perfil Creado">Perfil Creado</option>
+      <option value="Interesado">Interesado</option>
+      <option value="No Interesado">No Interesado</option>
+      <option value="Sin Contacto">Sin Contacto Múltiple</option>
+      <option value="Sin Respuesta">Sin Respuesta</option>
+      <option value="Fuera de Área">Fuera de Área</option>
+      <option value="VM/Inactivo">VM / Teléfono Inactivo</option>
+      <option value="Email/SMS Enviado">Email/SMS Enviado</option>
+    </select>
+  </div>
+  <div class="filter-divider"></div>
+  <button class="btn-reset" onclick="resetFilters()">✕ Limpiar</button>
+  <div class="filter-count">Mostrando <span id="filterCount">624</span> registros</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card" style="--kpi-color:var(--accent)">
+      <span class="kpi-card-icon">📋</span>
+      <div class="kpi-label">Total Leads</div>
+      <div class="kpi-value" id="kTotalLeads">624</div>
+      <div class="kpi-sub">Mayo 1–26, 2026</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--green)">
+      <span class="kpi-card-icon">📞</span>
+      <div class="kpi-label">Tasa de Contacto</div>
+      <div class="kpi-value" id="kContactRate">49.2%</div>
+      <div class="kpi-sub" id="kContactSub">307 de 624 contactados</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--cyan)">
+      <span class="kpi-card-icon">✅</span>
+      <div class="kpi-label">Perfiles Creados</div>
+      <div class="kpi-value" id="kProfiles">28</div>
+      <div class="kpi-sub" id="kProfileSub">4.5% del total</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--yellow)">
+      <span class="kpi-card-icon">⭐</span>
+      <div class="kpi-label">Leads Interesados</div>
+      <div class="kpi-value" id="kInterested">53</div>
+      <div class="kpi-sub" id="kInterSub">Interesados + Perfil</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--purple)">
+      <span class="kpi-card-icon">💬</span>
+      <div class="kpi-label">Respondieron</div>
+      <div class="kpi-value" id="kReplied">60</div>
+      <div class="kpi-sub" id="kRepliedSub">9.6% tasa de reply</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:var(--orange)">
+      <span class="kpi-card-icon">🔄</span>
+      <div class="kpi-label">2do/3er Seguimiento</div>
+      <div class="kpi-value" id="kFollowup">199</div>
+      <div class="kpi-sub" id="kFollowupSub">31.9% requirieron seguimiento</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Line chart + Donut Source -->
+  <div class="chart-grid grid-2-1">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--accent)"></span>Volumen Diario de Leads</div>
+          <div class="chart-subtitle">Leads creados y contactados por día</div>
+        </div>
+        <span class="chart-badge" id="badgeDailyAvg">Prom: 24/día</span>
+      </div>
+      <div class="chart-body" style="min-height:220px"><canvas id="chartDaily"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--purple)"></span>Leads por Fuente</div>
+          <div class="chart-subtitle">Distribución por canal de captación</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:220px"><canvas id="chartSource"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Area bar + Contact rate by area -->
+  <div class="chart-grid grid-2">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--cyan)"></span>Leads por Área de Campaña</div>
+          <div class="chart-subtitle">Total de leads generados por ciudad</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:240px"><canvas id="chartArea"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--green)"></span>Tasa de Contacto por Área</div>
+          <div class="chart-subtitle">% de leads efectivamente contactados</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:240px"><canvas id="chartAreaRate"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Funnel + Calls breakdown -->
+  <div class="chart-grid grid-1-2">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--yellow)"></span>Embudo de Conversión</div>
+          <div class="chart-subtitle">Del total de leads al perfil creado</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:250px"><canvas id="chartFunnel"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--orange)"></span>Distribución de Resultados</div>
+          <div class="chart-subtitle">Categorías de outcome por lead</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:250px"><canvas id="chartOutcome"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Communication stats + No-interest reasons -->
+  <div class="chart-grid grid-2">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--accent)"></span>Estadísticas de Comunicación</div>
+          <div class="chart-subtitle">Llamadas, VMs, contacto y texto/email por fuente</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:240px"><canvas id="chartComm"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--red)"></span>Razones de Descarte</div>
+          <div class="chart-subtitle">Motivos principales de leads no convertidos</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:240px"><canvas id="chartReject"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Table + Follow-up donut -->
+  <div class="chart-grid grid-2-1">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--cyan)"></span>Rendimiento Detallado por Área</div>
+          <div class="chart-subtitle">KPIs de contacto, perfil y conversión por ciudad</div>
+        </div>
+      </div>
+      <div class="table-wrap" id="areaTableWrap"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title"><span class="dot" style="--dot-color:var(--green)"></span>Seguimiento de Leads</div>
+          <div class="chart-subtitle">1er, 2do y 3er contacto</div>
+        </div>
+      </div>
+      <div class="chart-body" style="min-height:200px"><canvas id="chartFollowup"></canvas></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  Dashboard generado a partir de datos reales del CRM · 624 registros · Mayo 2026 · Campaña de Reclutamiento de Conductores
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const RAW = [{"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-01", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-01", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-01", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-01", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead does not remember applying", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-01", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-01", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Lead does not remember applying", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "San Jose", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-02", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-02", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Phone not working or disconnected", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead does not remember applying", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 1}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-02", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Wrong number - email sent to confirm", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead does not remember applying", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-03", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-04", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Vehicle too old / Does not meet vehicle year", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Lead will call back", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead does not remember applying", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Vehicle too old / Does not meet vehicle year", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "VM full or inactive", "replied": 1}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-01", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-01", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-04", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Profile created - Abandoned", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-05", "source": "Referral", "area": "", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Inbound call", "area": "", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-05", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-05", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead will call back", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 1}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 1}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-05", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Gmail", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-04", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-06", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 1}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Phone not working or disconnected", "replied": 1}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-06", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-06", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Lead will call back", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Manteca", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 1}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-07", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-07", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Lead will call back", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palmdale", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-07", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-06", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-06", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 0, "comment": "", "replied": 0}, {"created": "2026-05-06", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-08", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-08", "source": "Referral", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Gmail", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Gmail", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-05", "source": "Gmail", "area": "", "contacted_on": "2026-05-08", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-08", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-09", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 1}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Phone not working or disconnected", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-09", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Abandoned", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-09", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-09", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-08", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-09", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "VM full or inactive", "replied": 1}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-09", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-11", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-11", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-12", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Palo Alto", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "South San Francisco", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Escondido", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Windsor", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Wrong number - email sent to confirm", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Fairfield", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Phone not working or disconnected", "replied": 1}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-10", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Lead will call back", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-12", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Gmail", "area": "", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Gmail", "area": "", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Gmail", "area": "", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-11", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 1}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-13", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-12", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-13", "source": "Gmail", "area": "", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "", "replied": 0}, {"created": "2026-05-13", "source": "Gmail", "area": "", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "", "replied": 0}, {"created": "2026-05-13", "source": "Gmail", "area": "", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 1}, {"created": "2026-05-13", "source": "Gmail", "area": "", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-13", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Ventura", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-14", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-14", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "VM full or inactive", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-14", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-14", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Lancaster", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-14", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Stockton", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-15", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Sacramento", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Schedule conflict with ops", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-15", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-16", "has_2nd": 1, "has_3rd": 1, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Completing A1s", "replied": 0}, {"created": "2026-05-16", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Invalid email / Email bounced", "replied": 1}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Completing A1s", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-17", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-17", "source": "Gmail", "area": "", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-17", "source": "Gmail", "area": "", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-17", "source": "Gmail", "area": "", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-18", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-18", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No contact after multiple attempts", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-14", "source": "Referral", "area": "", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 1}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-19", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-19", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-20", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-20", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-21", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-21", "source": "Gmail", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Language barrier", "replied": 1}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No contact after multiple attempts", "replied": 1}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Vehicle too old / Does not meet vehicle requirements", "replied": 0}, {"created": "2026-05-22", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-22", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-22", "source": "Referral", "area": "", "contacted_on": "2026-05-23", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Payment)", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-23", "source": "Referral", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-23", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Payment)", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "No answer", "replied": 1}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-24", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 1, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Payment)", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - Interested", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Schedule)", "replied": 0}, {"created": "2026-05-25", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested (Payment)", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Out of area / Too far", "replied": 0}, {"created": "2026-05-26", "source": "Referral", "area": "", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Profile created - Next Steps Explained", "replied": 0}, {"created": "2026-05-22", "source": "Gmail", "area": "", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 1, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 1}, {"created": "2026-05-25", "source": "Gmail", "area": "", "contacted_on": "2026-05-27", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-26", "source": "Gmail", "area": "", "contacted_on": "2026-05-27", "has_2nd": 0, "has_3rd": 0, "called": 0, "vm": 0, "reached": 0, "texted": 1, "comment": "Email Sent / SMS Sent", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Schedule)", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 0, "texted": 1, "comment": "No answer", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Requested info by email / SMS", "replied": 1}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-26", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 0, "reached": 1, "texted": 0, "comment": "Contacted - No Interested", "replied": 0}, {"created": "2026-05-26", "source": "Facebook (VIVO)", "area": "Redondo Beach", "contacted_on": "2026-05-27", "has_2nd": 0, "has_3rd": 0, "called": 1, "vm": 1, "reached": 1, "texted": 1, "comment": "Contacted - No Interested (Schedule)", "replied": 0}];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function categorize(c) {
+  if (!c) return 'Sin datos';
+  if (c.startsWith('Profile created - Next')) return 'Perfil Creado';
+  if (c.startsWith('Profile created - Comp')) return 'Perfil en Proceso';
+  if (c.startsWith('Profile created - Aban')) return 'Perfil Abandonado';
+  if (c === 'Contacted - Interested') return 'Interesado';
+  if (c.includes('No Interested')) return 'No Interesado';
+  if (c === 'No contact after multiple attempts') return 'Sin Contacto';
+  if (c === 'No answer') return 'Sin Respuesta';
+  if (c === 'Out of area / Too far') return 'Fuera de Área';
+  if (c === 'VM full or inactive' || c === 'Phone not working or disconnected') return 'VM/Inactivo';
+  if (c === 'Email Sent / SMS Sent' || c === 'Requested info by email / SMS') return 'Email/SMS Enviado';
+  if (c.includes('Schedule conflict')) return 'Conflicto Horario';
+  if (c === 'Language barrier') return 'Barrera Idioma';
+  if (c.includes('Vehicle')) return 'Vehículo No Apto';
+  if (c.includes('remember applying')) return 'No Recuerda';
+  if (c.includes('Invalid email')) return 'Email Inválido';
+  if (c.includes('Lead will call')) return 'Llamará Luego';
+  return 'Otro';
+}
+
+RAW.forEach(r => { r.cat = categorize(r.comment); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTER STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let filtered = [...RAW];
+
+function applyFilters() {
+  const src = document.getElementById('fSource').value;
+  const area = document.getElementById('fArea').value;
+  const from = document.getElementById('fDateFrom').value;
+  const to = document.getElementById('fDateTo').value;
+  const reached = document.getElementById('fReached').value;
+  const cat = document.getElementById('fCat').value;
+
+  filtered = RAW.filter(r => {
+    if (src && r.source !== src) return false;
+    if (area && r.area !== area) return false;
+    if (from && r.created < from) return false;
+    if (to && r.created > to) return false;
+    if (reached !== '' && r.reached !== parseInt(reached)) return false;
+    if (cat && r.cat !== cat) return false;
+    return true;
+  });
+
+  document.getElementById('filterCount').textContent = filtered.length;
+  updateAll();
+}
+
+function resetFilters() {
+  document.getElementById('fSource').value = '';
+  document.getElementById('fArea').value = '';
+  document.getElementById('fDateFrom').value = '2026-05-01';
+  document.getElementById('fDateTo').value = '2026-05-26';
+  document.getElementById('fReached').value = '';
+  document.getElementById('fCat').value = '';
+  applyFilters();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART INSTANCES
+// ─────────────────────────────────────────────────────────────────────────────
+const charts = {};
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.font.size = 11;
+
+const COLORS = {
+  blue:   '#3b82f6', blue2:  'rgba(59,130,246,.7)',
+  green:  '#10b981', green2: 'rgba(16,185,129,.7)',
+  yellow: '#f59e0b', yellow2:'rgba(245,158,11,.7)',
+  red:    '#ef4444', red2:   'rgba(239,68,68,.7)',
+  purple: '#8b5cf6', purple2:'rgba(139,92,246,.7)',
+  cyan:   '#06b6d4', cyan2:  'rgba(6,182,212,.7)',
+  orange: '#f97316', orange2:'rgba(249,115,22,.7)',
+  pink:   '#ec4899', pink2:  'rgba(236,72,153,.7)',
+};
+
+const gridColor = 'rgba(31,45,69,.8)';
+
+function mkChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, config);
+  return charts[id];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE KPIs
+// ─────────────────────────────────────────────────────────────────────────────
+function updateKPIs(data) {
+  const n = data.length;
+  const reached = data.filter(r => r.reached === 1).length;
+  const profiles = data.filter(r => r.cat === 'Perfil Creado' || r.cat === 'Perfil en Proceso' || r.cat === 'Perfil Abandonado').length;
+  const interested = data.filter(r => r.cat === 'Interesado' || r.cat === 'Perfil Creado' || r.cat === 'Perfil en Proceso').length;
+  const replied = data.filter(r => r.replied === 1).length;
+  const followup = data.filter(r => r.has_2nd === 1 || r.has_3rd === 1).length;
+
+  document.getElementById('kTotalLeads').textContent = n.toLocaleString();
+  const rate = n > 0 ? (reached/n*100).toFixed(1) : 0;
+  document.getElementById('kContactRate').textContent = rate + '%';
+  document.getElementById('kContactSub').textContent = reached + ' de ' + n + ' contactados';
+  document.getElementById('kProfiles').textContent = profiles;
+  document.getElementById('kProfileSub').textContent = n > 0 ? (profiles/n*100).toFixed(1) + '% del total' : '0%';
+  document.getElementById('kInterested').textContent = interested;
+  document.getElementById('kInterSub').textContent = 'Interesados + Perfil';
+  document.getElementById('kReplied').textContent = replied;
+  document.getElementById('kRepliedSub').textContent = n > 0 ? (replied/n*100).toFixed(1) + '% tasa de reply' : '0%';
+  document.getElementById('kFollowup').textContent = followup;
+  document.getElementById('kFollowupSub').textContent = n > 0 ? (followup/n*100).toFixed(1) + '% requirieron seguimiento' : '0%';
+
+  // Badge
+  const days = [...new Set(data.map(r=>r.created))].length;
+  const avg = days > 0 ? (n/days).toFixed(1) : 0;
+  document.getElementById('badgeDailyAvg').textContent = 'Prom: ' + avg + '/día';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: DAILY LINE
+// ─────────────────────────────────────────────────────────────────────────────
+function updateDaily(data) {
+  const dailyMap = {};
+  const reachMap = {};
+  data.forEach(r => {
+    dailyMap[r.created] = (dailyMap[r.created]||0)+1;
+    if (r.reached) reachMap[r.created] = (reachMap[r.created]||0)+1;
+  });
+  const labels = Object.keys(dailyMap).sort();
+  const totals = labels.map(d => dailyMap[d]||0);
+  const reached = labels.map(d => reachMap[d]||0);
+  const shortLabels = labels.map(d => d.slice(5)); // MM-DD
+
+  mkChart('chartDaily', {
+    type:'line',
+    data:{
+      labels: shortLabels,
+      datasets:[
+        { label:'Total Leads', data:totals, borderColor:COLORS.blue, backgroundColor:'rgba(59,130,246,.1)',
+          borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.4 },
+        { label:'Contactados', data:reached, borderColor:COLORS.green, backgroundColor:'rgba(16,185,129,.1)',
+          borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.4 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, padding:16, color:'#94a3b8' } },
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          titleColor:'#e2e8f0', bodyColor:'#94a3b8', padding:10 } },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:'#64748b', maxRotation:45} },
+        y:{ grid:{color:gridColor}, ticks:{color:'#64748b'}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: SOURCE DONUT
+// ─────────────────────────────────────────────────────────────────────────────
+function updateSource(data) {
+  const map = {};
+  data.forEach(r => { map[r.source] = (map[r.source]||0)+1; });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const pal = [COLORS.blue,COLORS.green,COLORS.yellow,COLORS.orange,COLORS.purple];
+
+  mkChart('chartSource', {
+    type:'doughnut',
+    data:{
+      labels: sorted.map(([k])=>k),
+      datasets:[{ data:sorted.map(([,v])=>v),
+        backgroundColor:pal.map(c=>c+'cc'), borderColor:'#111827', borderWidth:3, hoverOffset:8 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ usePointStyle:true, padding:12, color:'#94a3b8', font:{size:11} } },
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.label+': '+c.parsed+' ('+Math.round(c.parsed/data.length*100)+'%)' } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: AREA BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function updateArea(data) {
+  const map = {};
+  data.forEach(r => { if(r.area) map[r.area] = (map[r.area]||0)+1; });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,13);
+
+  mkChart('chartArea', {
+    type:'bar',
+    data:{
+      labels: sorted.map(([k])=>k),
+      datasets:[{
+        label:'Leads', data:sorted.map(([,v])=>v),
+        backgroundColor: sorted.map(([,v],i)=> i===0?COLORS.blue+'dd':i===1?COLORS.cyan+'dd':COLORS.purple+'99'),
+        borderColor:'transparent', borderRadius:5, borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.parsed.y+' leads ('+Math.round(c.parsed.y/data.length*100)+'%)' } }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:'#64748b'} },
+        y:{ grid:{color:gridColor}, ticks:{color:'#64748b'}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: CONTACT RATE BY AREA
+// ─────────────────────────────────────────────────────────────────────────────
+function updateAreaRate(data) {
+  const map = {};
+  data.forEach(r => {
+    if(!r.area) return;
+    if(!map[r.area]) map[r.area]={total:0,reached:0};
+    map[r.area].total++;
+    if(r.reached) map[r.area].reached++;
+  });
+  const sorted = Object.entries(map)
+    .filter(([,v])=>v.total>=5)
+    .map(([k,v])=>({area:k,rate:Math.round(v.reached/v.total*100),total:v.total}))
+    .sort((a,b)=>b.rate-a.rate);
+
+  mkChart('chartAreaRate', {
+    type:'bar',
+    data:{
+      labels: sorted.map(s=>s.area),
+      datasets:[{
+        label:'Tasa de Contacto %',
+        data:sorted.map(s=>s.rate),
+        backgroundColor: sorted.map(s=>s.rate>=60?COLORS.green+'cc':s.rate>=45?COLORS.yellow+'cc':COLORS.red+'cc'),
+        borderColor:'transparent', borderRadius:5, borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.parsed.x+'% ('+sorted[c.dataIndex].total+' leads)' } }
+      },
+      scales:{
+        x:{ max:100, grid:{color:gridColor}, ticks:{color:'#64748b', callback:v=>v+'%'} },
+        y:{ grid:{display:false}, ticks:{color:'#94a3b8'} }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: FUNNEL
+// ─────────────────────────────────────────────────────────────────────────────
+function updateFunnel(data) {
+  const n = data.length;
+  const called = data.filter(r=>r.called===1).length;
+  const reached = data.filter(r=>r.reached===1).length;
+  const texted = data.filter(r=>r.texted===1).length;
+  const interested = data.filter(r=>r.cat==='Interesado'||r.cat==='Perfil Creado'||r.cat==='Perfil en Proceso').length;
+  const profiled = data.filter(r=>r.cat==='Perfil Creado'||r.cat==='Perfil en Proceso').length;
+
+  const steps = [
+    {label:'Total Leads Generados',  val:n,         color:COLORS.blue},
+    {label:'Llamadas Realizadas',     val:called,    color:COLORS.cyan},
+    {label:'Contacto Efectivo',       val:reached,   color:COLORS.green},
+    {label:'Email/SMS Enviado',       val:texted,    color:COLORS.yellow},
+    {label:'Mostraron Interés',       val:interested,color:COLORS.orange},
+    {label:'Perfil Creado',           val:profiled,  color:COLORS.purple},
+  ];
+
+  mkChart('chartFunnel', {
+    type:'bar',
+    data:{
+      labels:steps.map(s=>s.label),
+      datasets:[{
+        data:steps.map(s=>s.val),
+        backgroundColor:steps.map(s=>s.color+'cc'),
+        borderColor:'transparent', borderRadius:5, borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.parsed.x+' ('+Math.round(c.parsed.x/n*100)+'% del total)' } }
+      },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:'#64748b'} },
+        y:{ grid:{display:false}, ticks:{color:'#94a3b8', font:{size:11}} }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: OUTCOMES
+// ─────────────────────────────────────────────────────────────────────────────
+function updateOutcome(data) {
+  const map = {};
+  data.forEach(r => { map[r.cat] = (map[r.cat]||0)+1; });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const pal = [COLORS.orange,COLORS.red,COLORS.yellow,COLORS.blue,COLORS.green,COLORS.purple,COLORS.cyan,COLORS.pink,'#a78bfa','#34d399','#fbbf24','#f87171'];
+
+  mkChart('chartOutcome', {
+    type:'doughnut',
+    data:{
+      labels:sorted.map(([k])=>k),
+      datasets:[{
+        data:sorted.map(([,v])=>v),
+        backgroundColor:pal.slice(0,sorted.length).map(c=>c+'cc'),
+        borderColor:'#111827', borderWidth:2, hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'50%',
+      plugins:{
+        legend:{ position:'right', labels:{ usePointStyle:true, padding:10, color:'#94a3b8', font:{size:10}, boxWidth:10 } },
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.label+': '+c.parsed+' ('+Math.round(c.parsed/data.length*100)+'%)' } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: COMMUNICATION STATS
+// ─────────────────────────────────────────────────────────────────────────────
+function updateComm(data) {
+  const sources = [...new Set(data.map(r=>r.source))].sort();
+  const calledD = sources.map(s=>data.filter(r=>r.source===s&&r.called===1).length);
+  const vmD     = sources.map(s=>data.filter(r=>r.source===s&&r.vm===1).length);
+  const reachD  = sources.map(s=>data.filter(r=>r.source===s&&r.reached===1).length);
+  const textD   = sources.map(s=>data.filter(r=>r.source===s&&r.texted===1).length);
+
+  mkChart('chartComm', {
+    type:'bar',
+    data:{
+      labels:sources,
+      datasets:[
+        {label:'Llamadas',  data:calledD, backgroundColor:COLORS.blue+'cc',   borderRadius:3},
+        {label:'Buzón Voz', data:vmD,     backgroundColor:COLORS.yellow+'cc', borderRadius:3},
+        {label:'Contactado',data:reachD,  backgroundColor:COLORS.green+'cc',  borderRadius:3},
+        {label:'Email/SMS', data:textD,   backgroundColor:COLORS.purple+'cc', borderRadius:3},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'top', labels:{ usePointStyle:true, padding:14, color:'#94a3b8' } },
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1 }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:'#64748b'} },
+        y:{ grid:{color:gridColor}, ticks:{color:'#64748b'}, beginAtZero:true, stacked:false }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: REJECTION REASONS
+// ─────────────────────────────────────────────────────────────────────────────
+function updateReject(data) {
+  const neg = ['Sin Contacto','Sin Respuesta','No Interesado','Fuera de Área','VM/Inactivo',
+               'Conflicto Horario','Barrera Idioma','Vehículo No Apto','No Recuerda','Email Inválido'];
+  const map = {};
+  data.forEach(r=>{ if(neg.includes(r.cat)) map[r.cat]=(map[r.cat]||0)+1; });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const cols = [COLORS.red,COLORS.orange,COLORS.yellow,'#94a3b8','#a78bfa','#f472b6','#34d399','#60a5fa','#fbbf24','#f87171'];
+
+  mkChart('chartReject', {
+    type:'bar',
+    data:{
+      labels:sorted.map(([k])=>k),
+      datasets:[{ label:'Cantidad', data:sorted.map(([,v])=>v),
+        backgroundColor:cols.slice(0,sorted.length).map(c=>c+'cc'),
+        borderColor:'transparent', borderRadius:5, borderSkipped:false }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.parsed.x+' leads' } }
+      },
+      scales:{
+        x:{ grid:{color:gridColor}, ticks:{color:'#64748b'} },
+        y:{ grid:{display:false}, ticks:{color:'#94a3b8'} }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART: FOLLOW-UP DONUT
+// ─────────────────────────────────────────────────────────────────────────────
+function updateFollowup(data) {
+  const only1 = data.filter(r=>r.has_2nd===0&&r.has_3rd===0).length;
+  const has2  = data.filter(r=>r.has_2nd===1&&r.has_3rd===0).length;
+  const has3  = data.filter(r=>r.has_3rd===1).length;
+
+  mkChart('chartFollowup', {
+    type:'doughnut',
+    data:{
+      labels:['Solo 1er contacto','2do seguimiento','3er seguimiento'],
+      datasets:[{
+        data:[only1,has2,has3],
+        backgroundColor:[COLORS.blue+'cc',COLORS.yellow+'cc',COLORS.orange+'cc'],
+        borderColor:'#111827', borderWidth:3, hoverOffset:8
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ usePointStyle:true, padding:12, color:'#94a3b8', font:{size:11} } },
+        tooltip:{ backgroundColor:'#1a2235', borderColor:'#1f2d45', borderWidth:1,
+          callbacks:{ label:(c)=>' '+c.label+': '+c.parsed+' ('+Math.round(c.parsed/data.length*100)+'%)' } }
+        }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABLE: AREA PERFORMANCE
+// ─────────────────────────────────────────────────────────────────────────────
+function updateAreaTable(data) {
+  const map = {};
+  data.forEach(r => {
+    const a = r.area||'Sin área';
+    if(!map[a]) map[a]={total:0,reached:0,profiles:0,replied:0,interested:0,noInt:0};
+    map[a].total++;
+    if(r.reached) map[a].reached++;
+    if(r.cat==='Perfil Creado'||r.cat==='Perfil en Proceso') map[a].profiles++;
+    if(r.replied) map[a].replied++;
+    if(r.cat==='Interesado'||r.cat==='Perfil Creado'||r.cat==='Perfil en Proceso') map[a].interested++;
+    if(r.cat==='No Interesado') map[a].noInt++;
+  });
+
+  const rows = Object.entries(map).sort((a,b)=>b[1].total-a[1].total).filter(([k])=>k&&k!=='nan');
+  const maxTotal = Math.max(...rows.map(([,v])=>v.total));
+
+  let html = '<table><thead><tr>'+
+    '<th>#</th><th>Área</th><th>Total</th><th>Contactados</th><th>Tasa</th><th>Perfiles</th><th>Interesados</th><th>Respondieron</th>'+
+    '</tr></thead><tbody>';
+
+  const rateColors = (r) => r>=60?'#10b981':r>=45?'#f59e0b':'#ef4444';
+  const barColors = (r) => r>=60?'#10b981':r>=45?'#f59e0b':'#ef4444';
+
+  rows.forEach(([area,v],i) => {
+    const rate = v.total>0 ? Math.round(v.reached/v.total*100) : 0;
+    const w = Math.round(v.total/maxTotal*100);
+    html += `<tr>
+      <td><span class="area-rank">${i+1}</span></td>
+      <td style="font-weight:500">${area}</td>
+      <td>
+        <div class="progress-cell">
+          <div class="mini-bar"><div class="mini-fill" style="width:${w}%;background:var(--accent)"></div></div>
+          <span style="font-weight:600">${v.total}</span>
+        </div>
+      </td>
+      <td style="color:#94a3b8">${v.reached}</td>
+      <td>
+        <div class="progress-cell">
+          <div class="mini-bar"><div class="mini-fill" style="width:${rate}%;background:${barColors(rate)}"></div></div>
+          <span class="pct-text" style="color:${rateColors(rate)}">${rate}%</span>
+        </div>
+      </td>
+      <td style="color:var(--cyan);font-weight:600">${v.profiles}</td>
+      <td style="color:var(--yellow);font-weight:600">${v.interested}</td>
+      <td style="color:var(--purple)">${v.replied}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('areaTableWrap').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE ALL
+// ─────────────────────────────────────────────────────────────────────────────
+function updateAll() {
+  const d = filtered;
+  updateKPIs(d);
+  updateDaily(d);
+  updateSource(d);
+  updateArea(d);
+  updateAreaRate(d);
+  updateFunnel(d);
+  updateOutcome(d);
+  updateComm(d);
+  updateReject(d);
+  updateFollowup(d);
+  updateAreaTable(d);
+}
+
+// Init
+updateAll();
+</script>
+</body>
+</html>
